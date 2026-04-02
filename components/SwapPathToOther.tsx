@@ -59,13 +59,9 @@ export default function SwapPathToOther() {
       const provider = new ethers.BrowserProvider((window as any).ethereum);
       const signer = await provider.getSigner();
 
-      // Полный ABI для pathUSD
       const pathUSDContract = new ethers.Contract(
         PATHUSD,
-        [
-          "function approve(address spender, uint256 amount) external returns (bool)",
-          "function allowance(address owner, address spender) external view returns (uint256)"
-        ],
+        ["function approve(address spender, uint256 amount) external returns (bool)"],
         signer
       );
 
@@ -75,16 +71,14 @@ export default function SwapPathToOther() {
         signer
       );
 
-      const owner = await signer.getAddress();
-      const allowance = await pathUSDContract.allowance(owner, DEX_ADDRESS);
+      // Всегда делаем approve (как в рабочем Hardhat-скрипте)
+      console.log("Делаем approve pathUSD...");
+      const approveTx = await pathUSDContract.approve(DEX_ADDRESS, amountIn);
+      await approveTx.wait();
+      console.log("✅ Approve выполнен");
 
-      if (allowance < amountIn) {
-        console.log("Делаем approve pathUSD...");
-        const approveTx = await pathUSDContract.approve(DEX_ADDRESS, amountIn);
-        await approveTx.wait();
-        console.log("✅ Approve выполнен");
-      }
-
+      // Своп
+      console.log("Выполняем swap...");
       const tx = await dex.swapExactAmountIn(
         PATHUSD,
         tokenOutAddr,
@@ -94,7 +88,7 @@ export default function SwapPathToOther() {
 
       alert(`Транзакция отправлена!\nHash: ${tx.hash}`);
       await tx.wait();
-      alert(`✅ Своп успешно выполнен!`);
+      alert(`✅ Своп успешно выполнен!\nHash: ${tx.hash}`);
 
     } catch (error: any) {
       console.error("Ошибка свопа:", error);
