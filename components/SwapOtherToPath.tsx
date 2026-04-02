@@ -30,9 +30,31 @@ export default function SwapOtherToPath() {
     if ((window as any).ethereum) {
       try {
         await (window as any).ethereum.request({ method: 'eth_requestAccounts' });
+        // Автоматическое переключение на Tempo
+        await (window as any).ethereum.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: '0x1079' }],
+        });
         window.location.reload();
-      } catch (error) {
-        alert('Не удалось подключить кошелёк');
+      } catch (error: any) {
+        if (error.code === 4902) {
+          try {
+            await (window as any).ethereum.request({
+              method: 'wallet_addEthereumChain',
+              params: [{
+                chainId: '0x1079',
+                chainName: 'Tempo Mainnet',
+                nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
+                rpcUrls: ['https://rpc.tempo.xyz'],
+                blockExplorerUrls: ['https://explore.mainnet.tempo.xyz'],
+              }],
+            });
+          } catch (addError) {
+            console.error(addError);
+          }
+        } else {
+          alert('Не удалось подключить кошелёк');
+        }
       }
     } else {
       alert('Установите MetaMask или Rabby Wallet');
