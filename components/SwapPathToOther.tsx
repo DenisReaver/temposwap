@@ -65,21 +65,21 @@ export default function SwapPathToOther() {
         await switchToTempo();           // ← Переключаем на Tempo
         window.location.reload();
       } catch (error) {
-        alert('Не удалось подключить кошелёк');
+        alert('Failed to connect wallet');
       }
     } else {
-      alert('Установите MetaMask или Rabby Wallet');
+      alert('Install MetaMask or Rabbit Wallet');
     }
   };
 
   const handleSwap = async () => {
     if (!isConnected) {
-      alert('Подключите кошелёк!');
+      alert('Connect your wallet!');
       return;
     }
 
     if (!(window as any).ethereum) {
-      alert('Кошелёк не обнаружен.');
+      alert('Wallet not found.');
       return;
     }
 
@@ -122,13 +122,13 @@ export default function SwapPathToOther() {
         0
       );
 
-      alert(`Транзакция отправлена!\nHash: ${tx.hash}`);
+      alert(`Transaction sent!\nHash: ${tx.hash}`);
       await tx.wait();
-      alert(`✅ Своп успешно выполнен!`);
+      alert(`✅ Swap completed successfully!`);
 
     } catch (error: any) {
       console.error(error);
-      alert("Ошибка свопа:\n" + (error.reason || error.message || "Неизвестная ошибка"));
+      alert("Swap error:\n" + (error.reason || error.message || "Unknown error"));
     } finally {
       setIsSwapping(false);
     }
