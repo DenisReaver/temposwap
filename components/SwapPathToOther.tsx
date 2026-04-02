@@ -59,6 +59,7 @@ export default function SwapPathToOther() {
       const provider = new ethers.BrowserProvider((window as any).ethereum);
       const signer = await provider.getSigner();
 
+      // Полный ABI для pathUSD
       const pathUSDContract = new ethers.Contract(
         PATHUSD,
         [
@@ -78,8 +79,10 @@ export default function SwapPathToOther() {
       const allowance = await pathUSDContract.allowance(owner, DEX_ADDRESS);
 
       if (allowance < amountIn) {
+        console.log("Делаем approve pathUSD...");
         const approveTx = await pathUSDContract.approve(DEX_ADDRESS, amountIn);
         await approveTx.wait();
+        console.log("✅ Approve выполнен");
       }
 
       const tx = await dex.swapExactAmountIn(
@@ -94,7 +97,7 @@ export default function SwapPathToOther() {
       alert(`✅ Своп успешно выполнен!`);
 
     } catch (error: any) {
-      console.error(error);
+      console.error("Ошибка свопа:", error);
       alert("Ошибка свопа:\n" + (error.reason || error.message || "Неизвестная ошибка"));
     } finally {
       setIsSwapping(false);
