@@ -15,6 +15,8 @@ const TOKENS = {
 const PATHUSD = "0x20C0000000000000000000000000000000000000";
 const DEX_ADDRESS = "0xDEc0000000000000000000000000000000000000";
 
+const TEMPO_CHAIN_ID = 4217; // Tempo Mainnet
+
 export default function SwapPathToOther() {
   const { address, isConnected } = useAccount();
   const [toToken, setToToken] = useState('USDC');
@@ -26,10 +28,41 @@ export default function SwapPathToOther() {
     setIsClient(true);
   }, []);
 
+  // Автоматическое переключение на Tempo
+  const switchToTempo = async () => {
+    if (!(window as any).ethereum) return;
+
+    try {
+      await (window as any).ethereum.request({
+        method: 'wallet_switchEthereumChain',
+        params: [{ chainId: '0x1079' }], // 4217 в hex
+      });
+    } catch (switchError: any) {
+      if (switchError.code === 4902) {
+        // Добавляем сеть, если её нет
+        try {
+          await (window as any).ethereum.request({
+            method: 'wallet_addEthereumChain',
+            params: [{
+              chainId: '0x1079',
+              chainName: 'Tempo Mainnet',
+              nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
+              rpcUrls: ['https://rpc.tempo.xyz'],
+              blockExplorerUrls: ['https://explore.mainnet.tempo.xyz'],
+            }],
+          });
+        } catch (addError) {
+          console.error('Не удалось добавить сеть Tempo', addError);
+        }
+      }
+    }
+  };
+
   const connectWallet = async () => {
     if ((window as any).ethereum) {
       try {
         await (window as any).ethereum.request({ method: 'eth_requestAccounts' });
+        await switchToTempo();           // ← Переключаем на Tempo
         window.location.reload();
       } catch (error) {
         alert('Не удалось подключить кошелёк');
@@ -61,7 +94,10 @@ export default function SwapPathToOther() {
 
       const pathUSDContract = new ethers.Contract(
         PATHUSD,
-        ["function approve(address spender, uint256 amount) external returns (bool)"],
+        [
+          "function approve(address spender, uint256 amount) external returns (bool)",
+          "function allowance(address owner, address spender) external view returns (uint256)"
+        ],
         signer
       );
 
@@ -71,14 +107,14 @@ export default function SwapPathToOther() {
         signer
       );
 
-      // Всегда делаем approve (как в рабочем Hardhat-скрипте)
-      console.log("Делаем approve pathUSD...");
-      const approveTx = await pathUSDContract.approve(DEX_ADDRESS, amountIn);
-      await approveTx.wait();
-      console.log("✅ Approve выполнен");
+      const owner = await signer.getAddress();
+      const allowance = await pathUSDContract.allowance(owner, DEX_ADDRESS);
 
-      // Своп
-      console.log("Выполняем swap...");
+      if (allowance < amountIn) {
+        const approveTx = await pathUSDContract.approve(DEX_ADDRESS, amountIn);
+        await approveTx.wait();
+      }
+
       const tx = await dex.swapExactAmountIn(
         PATHUSD,
         tokenOutAddr,
@@ -88,10 +124,10 @@ export default function SwapPathToOther() {
 
       alert(`Транзакция отправлена!\nHash: ${tx.hash}`);
       await tx.wait();
-      alert(`✅ Своп успешно выполнен!\nHash: ${tx.hash}`);
+      alert(`✅ Своп успешно выполнен!`);
 
     } catch (error: any) {
-      console.error("Ошибка свопа:", error);
+      console.error(error);
       alert("Ошибка свопа:\n" + (error.reason || error.message || "Неизвестная ошибка"));
     } finally {
       setIsSwapping(false);
