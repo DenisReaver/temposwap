@@ -30,45 +30,23 @@ export default function SwapOtherToPath() {
     if ((window as any).ethereum) {
       try {
         await (window as any).ethereum.request({ method: 'eth_requestAccounts' });
-        // Автоматическое переключение на Tempo
-        await (window as any).ethereum.request({
-          method: 'wallet_switchEthereumChain',
-          params: [{ chainId: '0x1079' }],
-        });
         window.location.reload();
-      } catch (error: any) {
-        if (error.code === 4902) {
-          try {
-            await (window as any).ethereum.request({
-              method: 'wallet_addEthereumChain',
-              params: [{
-                chainId: '0x1079',
-                chainName: 'Tempo Mainnet',
-                nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
-                rpcUrls: ['https://rpc.tempo.xyz'],
-                blockExplorerUrls: ['https://explore.mainnet.tempo.xyz'],
-              }],
-            });
-          } catch (addError) {
-            console.error(addError);
-          }
-        } else {
-          alert('Failed to connect wallet');
-        }
+      } catch (error) {
+        alert('Не удалось подключить кошелёк');
       }
     } else {
-      alert('Install MetaMask or Rabbit Wallet');
+      alert('Установите MetaMask или Rabby Wallet');
     }
   };
 
   const handleSwap = async () => {
     if (!isConnected) {
-      alert('Connect your wallet!');
+      alert('Подключите кошелёк!');
       return;
     }
 
     if (!(window as any).ethereum) {
-      alert('Wallet not found.');
+      alert('Кошелёк не обнаружен.');
       return;
     }
 
@@ -83,10 +61,7 @@ export default function SwapOtherToPath() {
 
       const tokenIn = new ethers.Contract(
         tokenInAddr,
-        [
-          "function approve(address spender, uint256 amount) external returns (bool)",
-          "function allowance(address owner, address spender) external view returns (uint256)"
-        ],
+        ["function approve(address spender, uint256 amount) external returns (bool)"],
         signer
       );
 
@@ -96,14 +71,11 @@ export default function SwapOtherToPath() {
         signer
       );
 
-      const owner = await signer.getAddress();
-      const allowance = await tokenIn.allowance(owner, DEX_ADDRESS);
+      // Approve
+      const approveTx = await tokenIn.approve(DEX_ADDRESS, amountIn);
+      await approveTx.wait();
 
-      if (allowance < amountIn) {
-        const approveTx = await tokenIn.approve(DEX_ADDRESS, amountIn);
-        await approveTx.wait();
-      }
-
+      // Swap
       const tx = await dex.swapExactAmountIn(
         tokenInAddr,
         PATHUSD,
@@ -111,13 +83,13 @@ export default function SwapOtherToPath() {
         0
       );
 
-      alert(`Transaction sent!\nHash: ${tx.hash}`);
+      alert(`Транзакция отправлена!\nHash: ${tx.hash}`);
       await tx.wait();
-      alert(`✅ Swap completed successfully!`);
+      alert(`✅ Своп успешно выполнен!`);
 
     } catch (error: any) {
       console.error(error);
-      alert("Swap error:\n" + (error.reason || error.message || "Unknown error"));
+      alert("Ошибка свопа:\n" + (error.reason || error.message || "Неизвестная ошибка"));
     } finally {
       setIsSwapping(false);
     }
@@ -131,47 +103,43 @@ export default function SwapOtherToPath() {
     <div className="bg-zinc-900 rounded-3xl p-6 border border-zinc-800">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold">Stable → pathUSD</h2>
-        {isConnected ? (
-          <div className="text-sm text-green-400">Connected</div>
-        ) : (
-          <button 
-            onClick={connectWallet}
-            className="bg-white text-black px-6 py-2 rounded-full font-medium hover:bg-yellow-400"
-          >
-            Connect Wallet
-          </button>
-        )}
+        {isConnected && <div className="text-sm text-green-400">Connected</div>}
       </div>
 
-      <div className="bg-zinc-800 rounded-2xl p-5 mb-3">
-        <div className="text-sm text-gray-400 mb-3">You pay</div>
-        <div className="flex items-center gap-4">
+      {/* Основной блок свопа */}
+      <div className="space-y-2">
+        {/* You Pay */}
+        <div className="bg-zinc-800 rounded-2xl p-5">
+          <div className="flex justify-between items-center mb-4">
+            <div className="text-sm text-gray-400">You pay</div>
+            <div className="text-sm font-medium text-white">{fromToken}</div>
+          </div>
           <input
             type="text"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
-            className="bg-transparent text-4xl font-medium outline-none flex-1"
+            className="w-full bg-transparent text-5xl font-medium outline-none"
             placeholder="0.0"
           />
-          <select
-            value={fromToken}
-            onChange={(e) => setFromToken(e.target.value)}
-            className="bg-zinc-700 px-5 py-3 rounded-2xl font-medium"
-          >
-            <option value="USDC">USDC</option>
-            <option value="USDT0">USDT0</option>
-            <option value="capUSD">capUSD</option>
-          </select>
         </div>
-      </div>
 
-      <div className="flex justify-center -my-4">
-        <ArrowDownIcon className="w-6 h-6" />
-      </div>
+        {/* Arrow */}
+        <div className="flex justify-center -my-3 relative z-10">
+          <div className="bg-zinc-900 p-3 rounded-2xl border border-zinc-700">
+            <ArrowDownIcon className="w-6 h-6" />
+          </div>
+        </div>
 
-      <div className="bg-zinc-800 rounded-2xl p-5 mt-3">
-        <div className="text-sm text-gray-400 mb-3">You receive</div>
-        <div className="text-4xl font-medium text-right">pathUSD</div>
+        {/* You Receive */}
+        <div className="bg-zinc-800 rounded-2xl p-5">
+          <div className="flex justify-between items-center mb-4">
+            <div className="text-sm text-gray-400">You receive</div>
+          </div>
+          <div className="flex items-center justify-between">
+            <div className="text-5xl font-medium">—</div>
+            <div className="bg-zinc-700 px-6 py-3 rounded-2xl font-medium">pathUSD</div>
+          </div>
+        </div>
       </div>
 
       <button
