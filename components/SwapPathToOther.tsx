@@ -39,7 +39,7 @@ export default function SwapPathToOther() {
     }
   };
 
-    const handleSwap = async () => {
+  const handleSwap = async () => {
     if (!isConnected) {
       alert('Connect your wallet!');
       return;
@@ -111,38 +111,40 @@ export default function SwapPathToOther() {
       </div>
 
       {/* Основной блок свопа */}
-      <div className="space-y-3">
-        {/* You Pay */}
+      <div className="space-y-2">
+        {/* Pay Block */}
         <div className="bg-zinc-800 rounded-2xl p-5">
-          <div className="text-sm text-gray-400 mb-3">You pay</div>
-          <div className="flex items-center justify-between">
-            <input
-              type="text"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              className="bg-transparent text-4xl font-medium outline-none flex-1"
-              placeholder="0.0"
-            />
-            <div className="bg-zinc-700 px-5 py-2.5 rounded-xl font-medium">pathUSD</div>
+          <div className="flex justify-between items-center mb-4">
+            <div className="text-sm text-gray-400">You pay</div>
+            <div className="text-sm font-medium text-white">pathUSD</div>
           </div>
+          <input
+            type="text"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            className="w-full bg-transparent text-5xl font-medium outline-none"
+            placeholder="0.0"
+          />
         </div>
 
         {/* Arrow */}
-        <div className="flex justify-center -my-2">
+        <div className="flex justify-center -my-3 relative z-10">
           <div className="bg-zinc-900 p-3 rounded-2xl border border-zinc-700">
             <ArrowDownIcon className="w-6 h-6" />
           </div>
         </div>
 
-        {/* You Receive */}
+        {/* Receive Block */}
         <div className="bg-zinc-800 rounded-2xl p-5">
-          <div className="text-sm text-gray-400 mb-3">You receive</div>
+          <div className="flex justify-between items-center mb-4">
+            <div className="text-sm text-gray-400">You receive</div>
+          </div>
           <div className="flex items-center justify-between">
-            <div className="text-4xl font-medium">—</div>
+            <div className="text-5xl font-medium">—</div>
             <select
               value={toToken}
               onChange={(e) => setToToken(e.target.value)}
-              className="bg-zinc-700 px-5 py-2.5 rounded-xl font-medium"
+              className="bg-zinc-700 px-6 py-3 rounded-2xl font-medium text-lg"
             >
               <option value="USDC">USDC</option>
               <option value="USDT0">USDT0</option>
