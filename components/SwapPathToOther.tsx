@@ -15,8 +15,6 @@ const TOKENS = {
 const PATHUSD = "0x20C0000000000000000000000000000000000000";
 const DEX_ADDRESS = "0xDEc0000000000000000000000000000000000000";
 
-const TEMPO_CHAIN_ID = 4217; // Tempo Mainnet
-
 export default function SwapPathToOther() {
   const { address, isConnected } = useAccount();
   const [toToken, setToToken] = useState('USDC');
@@ -28,161 +26,70 @@ export default function SwapPathToOther() {
     setIsClient(true);
   }, []);
 
-  // Автоматическое переключение на Tempo
-  const switchToTempo = async () => {
-    if (!(window as any).ethereum) return;
-
-    try {
-      await (window as any).ethereum.request({
-        method: 'wallet_switchEthereumChain',
-        params: [{ chainId: '0x1079' }], // 4217 в hex
-      });
-    } catch (switchError: any) {
-      if (switchError.code === 4902) {
-        // Добавляем сеть, если её нет
-        try {
-          await (window as any).ethereum.request({
-            method: 'wallet_addEthereumChain',
-            params: [{
-              chainId: '0x1079',
-              chainName: 'Tempo Mainnet',
-              nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
-              rpcUrls: ['https://rpc.tempo.xyz'],
-              blockExplorerUrls: ['https://explore.mainnet.tempo.xyz'],
-            }],
-          });
-        } catch (addError) {
-          console.error('Не удалось добавить сеть Tempo', addError);
-        }
-      }
-    }
-  };
-
   const connectWallet = async () => {
     if ((window as any).ethereum) {
       try {
         await (window as any).ethereum.request({ method: 'eth_requestAccounts' });
-        await switchToTempo();           // ← Переключаем на Tempo
         window.location.reload();
       } catch (error) {
-        alert('Failed to connect wallet');
+        alert('Не удалось подключить кошелёк');
       }
     } else {
-      alert('Install MetaMask or Rabbit Wallet');
+      alert('Установите MetaMask или Rabby Wallet');
     }
   };
 
-  const handleSwap = async () => {
-    if (!isConnected) {
-      alert('Connect your wallet!');
-      return;
-    }
+  const handleSwap = async () => { /* ... твой рабочий код handleSwap ... */ };
 
-    if (!(window as any).ethereum) {
-      alert('Wallet not found.');
-      return;
-    }
-
-    setIsSwapping(true);
-
-    try {
-      const amountIn = parseUnits(amount, 6);
-      const tokenOutAddr = TOKENS[toToken as keyof typeof TOKENS];
-
-      const provider = new ethers.BrowserProvider((window as any).ethereum);
-      const signer = await provider.getSigner();
-
-      const pathUSDContract = new ethers.Contract(
-        PATHUSD,
-        [
-          "function approve(address spender, uint256 amount) external returns (bool)",
-          "function allowance(address owner, address spender) external view returns (uint256)"
-        ],
-        signer
-      );
-
-      const dex = new ethers.Contract(
-        DEX_ADDRESS,
-        ["function swapExactAmountIn(address tokenIn, address tokenOut, uint128 amountIn, uint128 minAmountOut) external returns (uint128)"],
-        signer
-      );
-
-      const owner = await signer.getAddress();
-      const allowance = await pathUSDContract.allowance(owner, DEX_ADDRESS);
-
-      if (allowance < amountIn) {
-        const approveTx = await pathUSDContract.approve(DEX_ADDRESS, amountIn);
-        await approveTx.wait();
-      }
-
-      const tx = await dex.swapExactAmountIn(
-        PATHUSD,
-        tokenOutAddr,
-        amountIn,
-        0
-      );
-
-      alert(`Transaction sent!\nHash: ${tx.hash}`);
-      await tx.wait();
-      alert(`✅ Swap completed successfully!`);
-
-    } catch (error: any) {
-      console.error(error);
-      alert("Swap error:\n" + (error.reason || error.message || "Unknown error"));
-    } finally {
-      setIsSwapping(false);
-    }
-  };
-
-  if (!isClient) {
-    return <div className="bg-zinc-900 rounded-3xl p-6 border border-zinc-800 h-[500px]" />;
-  }
+  if (!isClient) return <div className="bg-zinc-900 rounded-3xl p-6 border border-zinc-800 h-[500px]" />;
 
   return (
     <div className="bg-zinc-900 rounded-3xl p-6 border border-zinc-800">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold">pathUSD → Stable</h2>
-        {isConnected ? (
-          <div className="text-sm text-green-400">Connected</div>
-        ) : (
-          <button 
-            onClick={connectWallet}
-            className="bg-white text-black px-6 py-2 rounded-full font-medium hover:bg-yellow-400"
-          >
-            Connect Wallet
-          </button>
-        )}
+        {isConnected && <div className="text-sm text-green-400">Connected</div>}
       </div>
 
-      <div className="bg-zinc-800 rounded-2xl p-5 mb-3">
-        <div className="text-sm text-gray-400 mb-3">You pay</div>
-        <div className="flex items-center gap-4">
-          <input
-            type="text"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            className="bg-transparent text-4xl font-medium outline-none flex-1"
-            placeholder="0.0"
-          />
-          <div className="bg-zinc-700 px-5 py-3 rounded-2xl font-medium">pathUSD</div>
+      {/* Основной блок свопа */}
+      <div className="space-y-3">
+        {/* You Pay */}
+        <div className="bg-zinc-800 rounded-2xl p-5">
+          <div className="text-sm text-gray-400 mb-3">You pay</div>
+          <div className="flex items-center justify-between">
+            <input
+              type="text"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              className="bg-transparent text-4xl font-medium outline-none flex-1"
+              placeholder="0.0"
+            />
+            <div className="bg-zinc-700 px-5 py-2.5 rounded-xl font-medium">pathUSD</div>
+          </div>
         </div>
-      </div>
 
-      <div className="flex justify-center -my-4">
-        <ArrowDownIcon className="w-6 h-6" />
-      </div>
+        {/* Arrow */}
+        <div className="flex justify-center -my-2">
+          <div className="bg-zinc-900 p-3 rounded-2xl border border-zinc-700">
+            <ArrowDownIcon className="w-6 h-6" />
+          </div>
+        </div>
 
-      <div className="bg-zinc-800 rounded-2xl p-5 mt-3">
-        <div className="text-sm text-gray-400 mb-3">You receive</div>
-        <select
-          value={toToken}
-          onChange={(e) => setToToken(e.target.value)}
-          className="bg-zinc-700 px-5 py-3 rounded-2xl font-medium w-full"
-        >
-          <option value="USDC">USDC</option>
-          <option value="USDT0">USDT0</option>
-          <option value="capUSD">capUSD</option>
-        </select>
+        {/* You Receive */}
+        <div className="bg-zinc-800 rounded-2xl p-5">
+          <div className="text-sm text-gray-400 mb-3">You receive</div>
+          <div className="flex items-center justify-between">
+            <div className="text-4xl font-medium">—</div>
+            <select
+              value={toToken}
+              onChange={(e) => setToToken(e.target.value)}
+              className="bg-zinc-700 px-5 py-2.5 rounded-xl font-medium"
+            >
+              <option value="USDC">USDC</option>
+              <option value="USDT0">USDT0</option>
+              <option value="capUSD">capUSD</option>
+            </select>
+          </div>
+        </div>
       </div>
 
       <button
