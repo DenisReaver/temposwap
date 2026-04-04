@@ -17,7 +17,7 @@ const DEX_ADDRESS = "0xDEc0000000000000000000000000000000000000";
 
 export default function SwapOtherToPath() {
   const { address, isConnected } = useAccount();
-  const [fromToken, setFromToken] = useState('USDC');
+  const [fromToken, setFromToken] = useState<'USDC' | 'USDT0' | 'capUSD'>('USDC');
   const [amount, setAmount] = useState('0.1');
   const [isSwapping, setIsSwapping] = useState(false);
   const [isClient, setIsClient] = useState(false);
@@ -54,7 +54,7 @@ export default function SwapOtherToPath() {
 
     try {
       const amountIn = parseUnits(amount, 6);
-      const tokenInAddr = TOKENS[fromToken as keyof typeof TOKENS];
+      const tokenInAddr = TOKENS[fromToken];
 
       const provider = new ethers.BrowserProvider((window as any).ethereum);
       const signer = await provider.getSigner();
@@ -71,11 +71,9 @@ export default function SwapOtherToPath() {
         signer
       );
 
-      // Approve
       const approveTx = await tokenIn.approve(DEX_ADDRESS, amountIn);
       await approveTx.wait();
 
-      // Swap
       const tx = await dex.swapExactAmountIn(
         tokenInAddr,
         PATHUSD,
@@ -106,39 +104,44 @@ export default function SwapOtherToPath() {
         {isConnected && <div className="text-sm text-green-400">Connected</div>}
       </div>
 
-      {/* Основной блок свопа */}
-      <div className="space-y-2">
-        {/* You Pay */}
-        <div className="bg-zinc-800 rounded-2xl p-5">
-          <div className="flex justify-between items-center mb-4">
-            <div className="text-sm text-gray-400">You pay</div>
-            <div className="text-sm font-medium text-white">{fromToken}</div>
-          </div>
-          <input
-            type="text"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            className="w-full bg-transparent text-5xl font-medium outline-none"
-            placeholder="0.0"
-          />
+      {/* You Pay */}
+      <div className="bg-zinc-800 rounded-2xl p-5">
+        <div className="flex justify-between items-center mb-4">
+          <div className="text-sm text-gray-400">You pay</div>
+          <select
+            value={fromToken}
+            onChange={(e) => setFromToken(e.target.value as 'USDC' | 'USDT0' | 'capUSD')}
+            className="bg-zinc-700 px-5 py-2.5 rounded-xl font-medium text-lg cursor-pointer"
+          >
+            <option value="USDC">USDC</option>
+            <option value="USDT0">USDT0</option>
+            <option value="capUSD">capUSD</option>
+          </select>
         </div>
+        <input
+          type="text"
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
+          className="w-full bg-transparent text-5xl font-medium outline-none"
+          placeholder="0.0"
+        />
+      </div>
 
-        {/* Arrow */}
-        <div className="flex justify-center -my-3 relative z-10">
-          <div className="bg-zinc-900 p-3 rounded-2xl border border-zinc-700">
-            <ArrowDownIcon className="w-6 h-6" />
-          </div>
+      {/* Arrow */}
+      <div className="flex justify-center -my-3 relative z-10">
+        <div className="bg-zinc-900 p-3 rounded-2xl border border-zinc-700">
+          <ArrowDownIcon className="w-6 h-6" />
         </div>
+      </div>
 
-        {/* You Receive */}
-        <div className="bg-zinc-800 rounded-2xl p-5">
-          <div className="flex justify-between items-center mb-4">
-            <div className="text-sm text-gray-400">You receive</div>
-          </div>
-          <div className="flex items-center justify-between">
-            <div className="text-5xl font-medium">—</div>
-            <div className="bg-zinc-700 px-6 py-3 rounded-2xl font-medium">pathUSD</div>
-          </div>
+      {/* You Receive */}
+      <div className="bg-zinc-800 rounded-2xl p-5">
+        <div className="flex justify-between items-center mb-4">
+          <div className="text-sm text-gray-400">You receive</div>
+        </div>
+        <div className="flex items-center justify-between">
+          <div className="text-5xl font-medium">—</div>
+          <div className="bg-zinc-700 px-6 py-3 rounded-2xl font-medium">pathUSD</div>
         </div>
       </div>
 
