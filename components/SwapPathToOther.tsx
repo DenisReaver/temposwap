@@ -39,7 +39,67 @@ export default function SwapPathToOther() {
     }
   };
 
-  const handleSwap = async () => { /* ... твой рабочий код handleSwap ... */ };
+    const handleSwap = async () => {
+    if (!isConnected) {
+      alert('Connect your wallet!');
+      return;
+    }
+
+    if (!(window as any).ethereum) {
+      alert('Wallet not found.');
+      return;
+    }
+
+    setIsSwapping(true);
+
+    try {
+      const amountIn = parseUnits(amount, 6);
+      const tokenOutAddr = TOKENS[toToken as keyof typeof TOKENS];
+
+      const provider = new ethers.BrowserProvider((window as any).ethereum);
+      const signer = await provider.getSigner();
+
+      const pathUSDContract = new ethers.Contract(
+        PATHUSD,
+        [
+          "function approve(address spender, uint256 amount) external returns (bool)",
+          "function allowance(address owner, address spender) external view returns (uint256)"
+        ],
+        signer
+      );
+
+      const dex = new ethers.Contract(
+        DEX_ADDRESS,
+        ["function swapExactAmountIn(address tokenIn, address tokenOut, uint128 amountIn, uint128 minAmountOut) external returns (uint128)"],
+        signer
+      );
+
+      const owner = await signer.getAddress();
+      const allowance = await pathUSDContract.allowance(owner, DEX_ADDRESS);
+
+      if (allowance < amountIn) {
+        const approveTx = await pathUSDContract.approve(DEX_ADDRESS, amountIn);
+        await approveTx.wait();
+      }
+
+      const tx = await dex.swapExactAmountIn(
+        PATHUSD,
+        tokenOutAddr,
+        amountIn,
+        0
+      );
+
+      alert(`Transaction sent!\nHash: ${tx.hash}`);
+      await tx.wait();
+      alert(`✅ Swap completed successfully!`);
+
+    } catch (error: any) {
+      console.error(error);
+      alert("Swap error:\n" + (error.reason || error.message || "Unknown error"));
+    } finally {
+      setIsSwapping(false);
+    }
+  };
 
   if (!isClient) return <div className="bg-zinc-900 rounded-3xl p-6 border border-zinc-800 h-[500px]" />;
 
